@@ -31,13 +31,21 @@ Run the CLI helper from a local Debug build:
 .build/DerivedData/Build/Products/Debug/aeroxy report.html
 ```
 
+Install the CLI command for agent and terminal workflows:
+
+```sh
+make install-cli
+```
+
 ## Design Boundaries
 
 - Keep the main window light: tabs are fine, browser chrome is not.
 - Do not add an address bar, bookmarks, search engine integration, or browsing history for web URLs.
 - Local file history belongs in the menu, not in the primary viewer surface.
 - Main-frame web links should leave Aeroxy and open in the user's default browser.
+- Main-frame local HTML links should open as Aeroxy tabs.
 - CLI opens reuse the existing app window and create/select tabs instead of spawning separate app instances.
+- Keep printing available; avoid adding downloads, file upload panels, media capture, JavaScript prompts, or browser-style permissions.
 - Keep dependencies close to zero unless a dependency removes meaningful product risk.
 
 ## Code Style

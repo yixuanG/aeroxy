@@ -15,6 +15,12 @@ struct AeroxyCommands: Commands {
             }
             .keyboardShortcut("w")
             .disabled(model.selectedTab == nil)
+
+            Button("Print HTML...") {
+                model.printSelectedTab()
+            }
+            .keyboardShortcut("p")
+            .disabled(model.selectedTab == nil)
         }
 
         CommandMenu("History") {
@@ -50,4 +56,3 @@ struct AeroxyCommands: Commands {
         }
     }
 }
-

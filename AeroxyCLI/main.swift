@@ -6,23 +6,43 @@ private enum AeroxyCLI {
     static let appBundleIdentifier = "dev.yixuanguo.aeroxy"
 
     static func run() -> Int32 {
-        let arguments = Array(CommandLine.arguments.dropFirst())
+        var arguments = Array(CommandLine.arguments.dropFirst())
+        let wantsJSON = arguments.contains("--json")
+        arguments.removeAll { $0 == "--json" }
 
         if arguments.isEmpty || arguments.contains("--help") || arguments.contains("-h") {
             printUsage()
             return arguments.isEmpty ? 64 : 0
         }
 
+        if arguments.first == "doctor" {
+            guard arguments.count == 1 else {
+                printError("doctor does not accept arguments.", asJSON: wantsJSON)
+                return 64
+            }
+
+            printDoctor(asJSON: wantsJSON)
+            return 0
+        }
+
         if arguments.contains("--version") {
-            print("aeroxy \(version)")
+            if wantsJSON {
+                printJSON([
+                    "ok": true,
+                    "version": version
+                ])
+            } else {
+                print("aeroxy \(version)")
+            }
+
             return 0
         }
 
         do {
             let fileURLs = try parseFileURLs(from: arguments)
-            return open(fileURLs)
+            return open(fileURLs, asJSON: wantsJSON)
         } catch {
-            printError(error.localizedDescription)
+            printError(error.localizedDescription, asJSON: wantsJSON)
             return 64
         }
     }
@@ -99,11 +119,12 @@ private enum AeroxyCLI {
         ["html", "htm", "xhtml"].contains(url.pathExtension.lowercased())
     }
 
-    private static func open(_ fileURLs: [URL]) -> Int32 {
+    private static func open(_ fileURLs: [URL], asJSON: Bool) -> Int32 {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        let appURL = locateAppURL()
 
-        if let appURL = locateAppURL() {
+        if let appURL {
             process.arguments = ["-a", appURL.path] + fileURLs.map(\.path)
         } else {
             process.arguments = ["-b", appBundleIdentifier] + fileURLs.map(\.path)
@@ -112,9 +133,26 @@ private enum AeroxyCLI {
         do {
             try process.run()
             process.waitUntilExit()
+
+            if asJSON {
+                if process.terminationStatus == 0 {
+                    printJSON([
+                        "ok": true,
+                        "opened": fileURLs.map(\.path),
+                        "appPath": appURL?.path as Any? ?? NSNull(),
+                        "bundleIdentifier": appBundleIdentifier
+                    ])
+                } else {
+                    printJSON([
+                        "ok": false,
+                        "error": "/usr/bin/open exited with status \(process.terminationStatus)"
+                    ])
+                }
+            }
+
             return process.terminationStatus
         } catch {
-            printError("Could not open \(appName): \(error.localizedDescription)")
+            printError("Could not open \(appName): \(error.localizedDescription)", asJSON: asJSON)
             return 69
         }
     }
@@ -156,10 +194,62 @@ private enum AeroxyCLI {
             && isDirectory.boolValue
     }
 
+    private static func printDoctor(asJSON: Bool) {
+        let appURL = locateAppURL()
+        let commandPath = findCommandOnPath("aeroxy")
+        let openPath = "/usr/bin/open"
+        let canRunOpen = FileManager.default.isExecutableFile(atPath: openPath)
+        let payload: [String: Any] = [
+            "ok": canRunOpen,
+            "version": version,
+            "commandPath": commandPath as Any? ?? NSNull(),
+            "appPath": appURL?.path as Any? ?? NSNull(),
+            "bundleIdentifier": appBundleIdentifier,
+            "openToolPath": openPath,
+            "canRunOpenTool": canRunOpen,
+            "supportsNetworkURLs": false,
+            "supportedExtensions": ["html", "htm", "xhtml"]
+        ]
+
+        if asJSON {
+            printJSON(payload)
+            return
+        }
+
+        print(
+            """
+            Aeroxy CLI \(version)
+            command: \(commandPath ?? "not on PATH")
+            app: \(appURL?.path ?? "\(appBundleIdentifier) through LaunchServices")
+            open tool: \(canRunOpen ? openPath : "missing")
+            supported files: .html, .htm, .xhtml
+            network URLs: default browser only
+            """
+        )
+    }
+
+    private static func findCommandOnPath(_ name: String) -> String? {
+        let path = ProcessInfo.processInfo.environment["PATH"] ?? ""
+
+        for directory in path.split(separator: ":") {
+            let candidate = URL(fileURLWithPath: String(directory))
+                .appendingPathComponent(name)
+
+            if FileManager.default.isExecutableFile(atPath: candidate.path) {
+                return candidate.path
+            }
+        }
+
+        return nil
+    }
+
     private static func printUsage() {
         print(
             """
-            Usage: aeroxy [--version] <report.html> [report.html ...]
+            Usage:
+              aeroxy [--json] <report.html> [report.html ...]
+              aeroxy [--json] doctor
+              aeroxy [--json] --version
 
             Opens local HTML reports in Aeroxy. If Aeroxy is already running, the
             existing window is brought forward and each new report opens as a tab.
@@ -167,8 +257,26 @@ private enum AeroxyCLI {
         )
     }
 
-    private static func printError(_ message: String) {
+    private static func printError(_ message: String, asJSON: Bool = false) {
+        if asJSON {
+            printJSON([
+                "ok": false,
+                "error": message
+            ])
+            return
+        }
+
         FileHandle.standardError.write(Data("aeroxy: \(message)\n".utf8))
+    }
+
+    private static func printJSON(_ payload: [String: Any]) {
+        do {
+            let data = try JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys])
+            FileHandle.standardOutput.write(data)
+            FileHandle.standardOutput.write(Data("\n".utf8))
+        } catch {
+            FileHandle.standardError.write(Data("aeroxy: Could not encode JSON output.\n".utf8))
+        }
     }
 }
 

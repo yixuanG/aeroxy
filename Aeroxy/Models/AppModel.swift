@@ -6,6 +6,7 @@ import UniformTypeIdentifiers
 final class AppModel: ObservableObject {
     @Published private(set) var tabs: [HTMLTab] = []
     @Published var selectedTabID: HTMLTab.ID?
+    @Published private(set) var printRequestID = UUID()
 
     let history = HistoryStore()
 
@@ -77,36 +78,6 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func openLinkedFileInCurrentTab(_ url: URL, from tab: HTMLTab) {
-        guard URLPolicy.isOpenableLocalHTML(url) else {
-            NSWorkspace.shared.open(url)
-            return
-        }
-
-        let standardizedURL = url.standardizedFileURL
-        let accessGranted = standardizedURL.startAccessingSecurityScopedResource()
-
-        if let existingTab = tabs.first(where: { $0.id != tab.id && $0.fileURL == standardizedURL }) {
-            selectedTabID = existingTab.id
-
-            if accessGranted {
-                standardizedURL.stopAccessingSecurityScopedResource()
-            }
-
-            history.remember(standardizedURL)
-            return
-        }
-
-        guard tabs.contains(tab) else {
-            openFileURL(url)
-            return
-        }
-
-        tab.replaceFileURL(standardizedURL, securityScopeAccessGranted: accessGranted)
-        selectedTabID = tab.id
-        history.remember(standardizedURL)
-    }
-
     func openLinkedFileInNewTab(_ url: URL) {
         guard URLPolicy.isOpenableLocalHTML(url) else {
             NSWorkspace.shared.open(url)
@@ -114,6 +85,14 @@ final class AppModel: ObservableObject {
         }
 
         openFileURL(url)
+    }
+
+    func printSelectedTab() {
+        guard selectedTab != nil else {
+            return
+        }
+
+        printRequestID = UUID()
     }
 
     func closeTab(_ tab: HTMLTab) {

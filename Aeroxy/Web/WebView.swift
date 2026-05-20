@@ -4,7 +4,7 @@ import WebKit
 
 struct WebView: NSViewRepresentable {
     @ObservedObject var tab: HTMLTab
-    let openFileInCurrentTab: (URL) -> Void
+    let printRequestID: UUID
     let openFileInNewTab: (URL) -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -14,7 +14,7 @@ struct WebView: NSViewRepresentable {
     func makeNSView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
         configuration.defaultWebpagePreferences.allowsContentJavaScript = true
-        configuration.preferences.javaScriptCanOpenWindowsAutomatically = true
+        configuration.preferences.javaScriptCanOpenWindowsAutomatically = false
         configuration.suppressesIncrementalRendering = false
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
@@ -30,6 +30,7 @@ struct WebView: NSViewRepresentable {
     func updateNSView(_ webView: WKWebView, context: Context) {
         context.coordinator.parent = self
         context.coordinator.load(tab: tab, in: webView)
+        context.coordinator.printIfRequested(webView)
     }
 
     @MainActor
@@ -37,9 +38,11 @@ struct WebView: NSViewRepresentable {
         var parent: WebView
         private var loadedTabID: HTMLTab.ID?
         private var loadedFileURL: URL?
+        private var handledPrintRequestID: UUID
 
         init(parent: WebView) {
             self.parent = parent
+            self.handledPrintRequestID = parent.printRequestID
         }
 
         func load(tab: HTMLTab, in webView: WKWebView) {
@@ -65,6 +68,11 @@ struct WebView: NSViewRepresentable {
                 return
             }
 
+            if navigationAction.shouldPerformDownload {
+                decisionHandler(.cancel)
+                return
+            }
+
             if navigationAction.targetFrame == nil {
                 openNewWindowURL(url)
                 decisionHandler(.cancel)
@@ -74,7 +82,7 @@ struct WebView: NSViewRepresentable {
             if navigationAction.targetFrame?.isMainFrame == true {
                 if URLPolicy.isOpenableLocalHTML(url),
                    url.standardizedFileURL.path != parent.tab.fileURL.path {
-                    parent.openFileInCurrentTab(url)
+                    parent.openFileInNewTab(url)
                     decisionHandler(.cancel)
                     return
                 }
@@ -90,6 +98,33 @@ struct WebView: NSViewRepresentable {
                     decisionHandler(.cancel)
                     return
                 }
+            }
+
+            decisionHandler(.allow)
+        }
+
+        func webView(
+            _ webView: WKWebView,
+            decidePolicyFor navigationResponse: WKNavigationResponse,
+            decisionHandler: @escaping @MainActor @Sendable (WKNavigationResponsePolicy) -> Void
+        ) {
+            guard navigationResponse.isForMainFrame else {
+                decisionHandler(.allow)
+                return
+            }
+
+            guard navigationResponse.canShowMIMEType else {
+                decisionHandler(.cancel)
+                return
+            }
+
+            let disposition = (navigationResponse.response as? HTTPURLResponse)?
+                .value(forHTTPHeaderField: "Content-Disposition")?
+                .lowercased()
+
+            if disposition?.contains("attachment") == true {
+                decisionHandler(.cancel)
+                return
             }
 
             decisionHandler(.allow)
@@ -127,6 +162,62 @@ struct WebView: NSViewRepresentable {
             withError error: Error
         ) {
             report(error)
+        }
+
+        func webView(
+            _ webView: WKWebView,
+            runJavaScriptAlertPanelWithMessage message: String,
+            initiatedByFrame frame: WKFrameInfo,
+            completionHandler: @escaping @MainActor @Sendable () -> Void
+        ) {
+            completionHandler()
+        }
+
+        func webView(
+            _ webView: WKWebView,
+            runJavaScriptConfirmPanelWithMessage message: String,
+            initiatedByFrame frame: WKFrameInfo,
+            completionHandler: @escaping @MainActor @Sendable (Bool) -> Void
+        ) {
+            completionHandler(false)
+        }
+
+        func webView(
+            _ webView: WKWebView,
+            runJavaScriptTextInputPanelWithPrompt prompt: String,
+            defaultText: String?,
+            initiatedByFrame frame: WKFrameInfo,
+            completionHandler: @escaping @MainActor @Sendable (String?) -> Void
+        ) {
+            completionHandler(nil)
+        }
+
+        func webView(
+            _ webView: WKWebView,
+            runOpenPanelWith parameters: WKOpenPanelParameters,
+            initiatedByFrame frame: WKFrameInfo,
+            completionHandler: @escaping @MainActor @Sendable ([URL]?) -> Void
+        ) {
+            completionHandler(nil)
+        }
+
+        func webView(
+            _ webView: WKWebView,
+            requestMediaCapturePermissionFor origin: WKSecurityOrigin,
+            initiatedByFrame frame: WKFrameInfo,
+            type: WKMediaCaptureType,
+            decisionHandler: @escaping @MainActor @Sendable (WKPermissionDecision) -> Void
+        ) {
+            decisionHandler(.deny)
+        }
+
+        func printIfRequested(_ webView: WKWebView) {
+            guard handledPrintRequestID != parent.printRequestID else {
+                return
+            }
+
+            handledPrintRequestID = parent.printRequestID
+            webView.printOperation(with: NSPrintInfo.shared).run()
         }
 
         private func openNewWindowURL(_ url: URL) {

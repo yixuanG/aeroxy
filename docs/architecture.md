@@ -20,7 +20,7 @@ Allowed:
 - Open local `.html`, `.htm`, and `.xhtml` files.
 - Switch between local files with tabs.
 - Use the History menu for recently opened local files.
-- Follow local HTML links inside Aeroxy.
+- Follow local HTML links as Aeroxy tabs.
 - Open web links in the default browser.
 - Open files from CLI workflows with `aeroxy report.html`.
 
@@ -36,11 +36,19 @@ Avoid:
 
 When the user selects a file, Aeroxy starts a read-only security scope and keeps it alive through the `HTMLTab` lifetime. The WebKit load call uses the file's parent directory as `allowingReadAccessTo` so relative report assets work without granting broad filesystem access.
 
-Main-frame local HTML links update the current tab by default. Local HTML links that request a new window open as a new tab. Local non-HTML main-frame links are handed to the system instead of expanding Aeroxy into a general file browser.
+Main-frame local HTML links open as tabs by default. Local non-HTML main-frame links are handed to the system instead of expanding Aeroxy into a general file browser.
 
 ## CLI Entry
 
 The `aeroxy` tool validates local HTML paths and then calls `/usr/bin/open` against the nearby `Aeroxy.app` when running from a build directory or against the registered `dev.yixuanguo.aeroxy` bundle identifier when installed. It does not parse or render HTML itself.
+
+Inside the app bundle, the CLI is copied to `Contents/Library/Helpers/aeroxy` so it can remain separately signed from the sandboxed viewer app.
+
+`make install-cli` builds the app and symlinks `aeroxy` into `~/.local/bin` by default, so agent and terminal workflows can prefer Aeroxy without changing the system default HTML handler. `aeroxy --json doctor` provides a stable machine-readable availability check.
+
+## Viewer Capabilities
+
+Aeroxy keeps printing available through the app menu. Browser-adjacent features such as downloads, file upload panels, media capture prompts, and JavaScript alert/confirm/text prompts are not part of the viewer surface.
 
 ## UI Layer
 

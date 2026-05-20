@@ -19,9 +19,7 @@ struct ContentView: View {
                     if let tab = model.selectedTab {
                         WebView(
                             tab: tab,
-                            openFileInCurrentTab: { url in
-                                model.openLinkedFileInCurrentTab(url, from: tab)
-                            },
+                            printRequestID: model.printRequestID,
                             openFileInNewTab: model.openLinkedFileInNewTab
                         )
                         .id(tab.id)
