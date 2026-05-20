@@ -20,6 +20,7 @@ xcodebuild \
   build
 
 cp -R "$APP_PATH" "$PACKAGE_DIR/"
+ln -s /Applications "$PACKAGE_DIR/Applications"
 hdiutil create \
   -volname "Aeroxy" \
   -srcfolder "$PACKAGE_DIR" \
@@ -28,4 +29,3 @@ hdiutil create \
   "$DMG_PATH"
 
 echo "Created $DMG_PATH"
-
