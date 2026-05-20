@@ -4,6 +4,7 @@ import WebKit
 
 struct WebView: NSViewRepresentable {
     @ObservedObject var tab: HTMLTab
+    let openFileInCurrentTab: (URL) -> Void
     let openFileInNewTab: (URL) -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -35,19 +36,23 @@ struct WebView: NSViewRepresentable {
     final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         var parent: WebView
         private var loadedTabID: HTMLTab.ID?
+        private var loadedFileURL: URL?
 
         init(parent: WebView) {
             self.parent = parent
         }
 
         func load(tab: HTMLTab, in webView: WKWebView) {
-            guard loadedTabID != tab.id else {
+            let fileURL = tab.fileURL.standardizedFileURL
+
+            guard loadedTabID != tab.id || loadedFileURL != fileURL else {
                 return
             }
 
             loadedTabID = tab.id
+            loadedFileURL = fileURL
             tab.loadError = nil
-            webView.loadFileURL(tab.fileURL, allowingReadAccessTo: tab.readAccessURL)
+            webView.loadFileURL(fileURL, allowingReadAccessTo: tab.readAccessURL)
         }
 
         func webView(
@@ -66,11 +71,25 @@ struct WebView: NSViewRepresentable {
                 return
             }
 
-            if navigationAction.targetFrame?.isMainFrame == true,
-               URLPolicy.isExternalMainFrameURL(url) {
-                NSWorkspace.shared.open(url)
-                decisionHandler(.cancel)
-                return
+            if navigationAction.targetFrame?.isMainFrame == true {
+                if URLPolicy.isOpenableLocalHTML(url),
+                   url.standardizedFileURL.path != parent.tab.fileURL.path {
+                    parent.openFileInCurrentTab(url)
+                    decisionHandler(.cancel)
+                    return
+                }
+
+                if url.isFileURL, !URLPolicy.isOpenableLocalHTML(url) {
+                    NSWorkspace.shared.open(url)
+                    decisionHandler(.cancel)
+                    return
+                }
+
+                if URLPolicy.isExternalMainFrameURL(url) {
+                    NSWorkspace.shared.open(url)
+                    decisionHandler(.cancel)
+                    return
+                }
             }
 
             decisionHandler(.allow)

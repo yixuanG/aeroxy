@@ -22,6 +22,8 @@
 		AA0000000000000000000113 /* WindowConfigurator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000213 /* WindowConfigurator.swift */; };
 		AA0000000000000000000114 /* WebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000214 /* WebView.swift */; };
 		AA0000000000000000000115 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000215 /* Assets.xcassets */; };
+		AB0000000000000000000101 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0000000000000000000201 /* main.swift */; };
+		AB0000000000000000000102 /* aeroxy in Embed CLI */ = {isa = PBXBuildFile; fileRef = AB0000000000000000000301 /* aeroxy */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -43,6 +45,8 @@
 		AA0000000000000000000216 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AA0000000000000000000217 /* Aeroxy.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Aeroxy.entitlements; sourceTree = "<group>"; };
 		AA0000000000000000000301 /* Aeroxy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Aeroxy.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB0000000000000000000201 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		AB0000000000000000000301 /* aeroxy */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = aeroxy; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -53,13 +57,35 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AB0000000000000000000402 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		AB0000000000000000000403 /* Embed CLI */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 6;
+			files = (
+				AB0000000000000000000102 /* aeroxy in Embed CLI */,
+			);
+			name = "Embed CLI";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXGroup section */
 		AA0000000000000000000002 = {
 			isa = PBXGroup;
 			children = (
 				AA0000000000000000000501 /* Aeroxy */,
+				AB0000000000000000000501 /* AeroxyCLI */,
 				AA0000000000000000000003 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -68,6 +94,7 @@
 			isa = PBXGroup;
 			children = (
 				AA0000000000000000000301 /* Aeroxy.app */,
+				AB0000000000000000000301 /* aeroxy */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -136,6 +163,14 @@
 			path = Resources;
 			sourceTree = "<group>";
 		};
+		AB0000000000000000000501 /* AeroxyCLI */ = {
+			isa = PBXGroup;
+			children = (
+				AB0000000000000000000201 /* main.swift */,
+			);
+			path = AeroxyCLI;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -145,16 +180,34 @@
 			buildPhases = (
 				AA0000000000000000000401 /* Sources */,
 				AA0000000000000000000403 /* Frameworks */,
+				AB0000000000000000000403 /* Embed CLI */,
 				AA0000000000000000000402 /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				AB0000000000000000000601 /* PBXTargetDependency */,
 			);
 			name = Aeroxy;
 			productName = Aeroxy;
 			productReference = AA0000000000000000000301 /* Aeroxy.app */;
 			productType = "com.apple.product-type.application";
+		};
+		AB0000000000000000000009 /* AeroxyCLI */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AB0000000000000000000901 /* Build configuration list for PBXNativeTarget "AeroxyCLI" */;
+			buildPhases = (
+				AB0000000000000000000401 /* Sources */,
+				AB0000000000000000000402 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AeroxyCLI;
+			productName = aeroxy;
+			productReference = AB0000000000000000000301 /* aeroxy */;
+			productType = "com.apple.product-type.tool";
 		};
 /* End PBXNativeTarget section */
 
@@ -167,6 +220,9 @@
 				LastUpgradeCheck = 2650;
 				TargetAttributes = {
 					AA0000000000000000000009 = {
+						CreatedOnToolsVersion = 26.5;
+					};
+					AB0000000000000000000009 = {
 						CreatedOnToolsVersion = 26.5;
 					};
 				};
@@ -185,6 +241,7 @@
 			projectRoot = "";
 			targets = (
 				AA0000000000000000000009 /* Aeroxy */,
+				AB0000000000000000000009 /* AeroxyCLI */,
 			);
 		};
 /* End PBXProject section */
@@ -222,7 +279,33 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AB0000000000000000000401 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AB0000000000000000000101 /* main.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		AB0000000000000000000601 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AB0000000000000000000009 /* AeroxyCLI */;
+			targetProxy = AB0000000000000000000602 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXContainerItemProxy section */
+		AB0000000000000000000602 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AA0000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AB0000000000000000000009;
+			remoteInfo = AeroxyCLI;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin XCBuildConfiguration section */
 		AA0000000000000000000801 /* Debug */ = {
@@ -392,6 +475,36 @@
 			};
 			name = Release;
 		};
+		AB0000000000000000000801 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.yixuanguo.aeroxy.cli;
+				PRODUCT_NAME = aeroxy;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		AB0000000000000000000802 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.yixuanguo.aeroxy.cli;
+				PRODUCT_NAME = aeroxy;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -413,8 +526,16 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		AB0000000000000000000901 /* Build configuration list for PBXNativeTarget "AeroxyCLI" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AB0000000000000000000801 /* Debug */,
+				AB0000000000000000000802 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 	};
 	rootObject = AA0000000000000000000001 /* Project object */;
 }
-

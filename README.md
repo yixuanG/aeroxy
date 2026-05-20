@@ -6,7 +6,7 @@ Aeroxy is a tiny macOS HTML report viewer for AI-generated local reports. It ren
 
 - Local HTML viewer, not a browser: no address bar, bookmarks, or navigation chrome.
 - WebKit rendering for Safari-quality HTML, CSS, and JavaScript.
-- File links stay in Aeroxy; `http://` and `https://` main-frame navigations open in the default browser.
+- Local HTML links stay in Aeroxy; `http://` and `https://` main-frame navigations open in the default browser.
 - Recent local HTML files are available from the History menu.
 - Multiple local HTML files can be kept open with tabs.
 - Sandboxed read-only file access with security-scoped bookmarks for history.
@@ -34,6 +34,22 @@ The script keeps derived data and packaging artifacts inside `.build/` so the pr
 
 For public distribution, sign and notarize the app with a Developer ID certificate before publishing the DMG.
 
+## CLI Entry
+
+The Xcode project also builds a tiny `aeroxy` command-line helper. It opens local HTML files in Aeroxy and reuses the existing app window:
+
+```sh
+.build/DerivedData/Build/Products/Debug/aeroxy report.html
+```
+
+When Aeroxy is installed, the helper is embedded at:
+
+```sh
+/Applications/Aeroxy.app/Contents/MacOS/aeroxy report.html
+```
+
+The helper accepts `.html`, `.htm`, and `.xhtml` files only. Network URLs belong in the default browser.
+
 ## Repository Notes
 
 The project is intentionally dependency-light:
@@ -45,4 +61,3 @@ The project is intentionally dependency-light:
 ## License
 
 MIT
-

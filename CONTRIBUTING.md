@@ -25,12 +25,19 @@ Build a local unsigned DMG:
 Scripts/build-dmg.sh
 ```
 
+Run the CLI helper from a local Debug build:
+
+```sh
+.build/DerivedData/Build/Products/Debug/aeroxy report.html
+```
+
 ## Design Boundaries
 
 - Keep the main window light: tabs are fine, browser chrome is not.
 - Do not add an address bar, bookmarks, search engine integration, or browsing history for web URLs.
 - Local file history belongs in the menu, not in the primary viewer surface.
 - Main-frame web links should leave Aeroxy and open in the user's default browser.
+- CLI opens reuse the existing app window and create/select tabs instead of spawning separate app instances.
 - Keep dependencies close to zero unless a dependency removes meaningful product risk.
 
 ## Code Style
@@ -47,4 +54,3 @@ Please include:
 - The product behavior changed.
 - The build command or manual verification used.
 - Any security or sandboxing impact.
-
