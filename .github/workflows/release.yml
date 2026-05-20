@@ -1,0 +1,57 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Toolchain
+        run: |
+          sw_vers
+          xcodebuild -version
+          xcode-select -p
+          gh --version
+
+      - name: Build DMG
+        run: |
+          Scripts/build-dmg.sh
+          VERSION="${GITHUB_REF_NAME#v}"
+          mv .build/Aeroxy.dmg ".build/Aeroxy-${VERSION}.dmg"
+          shasum -a 256 ".build/Aeroxy-${VERSION}.dmg" > ".build/Aeroxy-${VERSION}.dmg.sha256"
+
+      - name: Release notes
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          cat > .build/release-notes.md <<EOF
+          Aeroxy ${VERSION}
+
+          First public developer preview of Aeroxy, a tiny macOS HTML report viewer for AI-generated local reports.
+
+          Notes:
+          - Requires macOS 15 or newer.
+          - This preview DMG is unsigned and not notarized yet. macOS Gatekeeper may require right-click Open for first launch.
+          - Web links open in the system default browser; local HTML links open as Aeroxy tabs.
+          - The embedded CLI helper is available inside the app bundle at Contents/Library/Helpers/aeroxy.
+
+          SHA-256 checksum is attached as a separate .sha256 file.
+          EOF
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          gh release create "$GITHUB_REF_NAME" \
+            ".build/Aeroxy-${VERSION}.dmg" \
+            ".build/Aeroxy-${VERSION}.dmg.sha256" \
+            --title "Aeroxy ${VERSION}" \
+            --notes-file .build/release-notes.md

@@ -2,6 +2,10 @@
 
 Aeroxy is a tiny macOS HTML report viewer for AI-generated local reports. It renders with WebKit, keeps the app shape closer to a lightweight viewer than a browser, and sends web links to the system default browser.
 
+## Download
+
+Download the latest DMG from [GitHub Releases](https://github.com/yixuanG/aeroxy/releases/latest).
+
 ## Product Shape
 
 - Local HTML viewer, not a browser: no address bar, bookmarks, or navigation chrome.
