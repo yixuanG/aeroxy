@@ -1,0 +1,150 @@
+import AppKit
+import SwiftUI
+import WebKit
+
+struct WebView: NSViewRepresentable {
+    @ObservedObject var tab: HTMLTab
+    let openFileInNewTab: (URL) -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(parent: self)
+    }
+
+    func makeNSView(context: Context) -> WKWebView {
+        let configuration = WKWebViewConfiguration()
+        configuration.defaultWebpagePreferences.allowsContentJavaScript = true
+        configuration.preferences.javaScriptCanOpenWindowsAutomatically = true
+        configuration.suppressesIncrementalRendering = false
+
+        let webView = WKWebView(frame: .zero, configuration: configuration)
+        webView.navigationDelegate = context.coordinator
+        webView.uiDelegate = context.coordinator
+        webView.allowsMagnification = true
+        webView.allowsBackForwardNavigationGestures = false
+        webView.underPageBackgroundColor = .clear
+        context.coordinator.load(tab: tab, in: webView)
+        return webView
+    }
+
+    func updateNSView(_ webView: WKWebView, context: Context) {
+        context.coordinator.parent = self
+        context.coordinator.load(tab: tab, in: webView)
+    }
+
+    @MainActor
+    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
+        var parent: WebView
+        private var loadedTabID: HTMLTab.ID?
+
+        init(parent: WebView) {
+            self.parent = parent
+        }
+
+        func load(tab: HTMLTab, in webView: WKWebView) {
+            guard loadedTabID != tab.id else {
+                return
+            }
+
+            loadedTabID = tab.id
+            tab.loadError = nil
+            webView.loadFileURL(tab.fileURL, allowingReadAccessTo: tab.readAccessURL)
+        }
+
+        func webView(
+            _ webView: WKWebView,
+            decidePolicyFor navigationAction: WKNavigationAction,
+            decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void
+        ) {
+            guard let url = navigationAction.request.url else {
+                decisionHandler(.allow)
+                return
+            }
+
+            if navigationAction.targetFrame == nil {
+                openNewWindowURL(url)
+                decisionHandler(.cancel)
+                return
+            }
+
+            if navigationAction.targetFrame?.isMainFrame == true,
+               URLPolicy.isExternalMainFrameURL(url) {
+                NSWorkspace.shared.open(url)
+                decisionHandler(.cancel)
+                return
+            }
+
+            decisionHandler(.allow)
+        }
+
+        func webView(
+            _ webView: WKWebView,
+            createWebViewWith configuration: WKWebViewConfiguration,
+            for navigationAction: WKNavigationAction,
+            windowFeatures: WKWindowFeatures
+        ) -> WKWebView? {
+            guard let url = navigationAction.request.url else {
+                return nil
+            }
+
+            openNewWindowURL(url)
+            return nil
+        }
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            updateTitle(from: webView)
+        }
+
+        func webView(
+            _ webView: WKWebView,
+            didFailProvisionalNavigation navigation: WKNavigation!,
+            withError error: Error
+        ) {
+            report(error)
+        }
+
+        func webView(
+            _ webView: WKWebView,
+            didFail navigation: WKNavigation!,
+            withError error: Error
+        ) {
+            report(error)
+        }
+
+        private func openNewWindowURL(_ url: URL) {
+            if url.isFileURL {
+                parent.openFileInNewTab(url)
+            } else {
+                NSWorkspace.shared.open(url)
+            }
+        }
+
+        private func updateTitle(from webView: WKWebView) {
+            webView.evaluateJavaScript("document.title") { [weak self] value, _ in
+                guard let self else {
+                    return
+                }
+
+                let title = (value as? String)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+
+                guard let title, !title.isEmpty else {
+                    return
+                }
+
+                Task { @MainActor in
+                    self.parent.tab.title = title
+                }
+            }
+        }
+
+        private func report(_ error: Error) {
+            let nsError = error as NSError
+
+            guard nsError.code != NSURLErrorCancelled else {
+                return
+            }
+
+            parent.tab.loadError = nsError.localizedDescription
+        }
+    }
+}

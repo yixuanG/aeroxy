@@ -1,0 +1,14 @@
+.DS_Store
+.build/
+DerivedData/
+*.xcuserstate
+*.xcuserdata/
+*.moved-aside
+*.xcscmblueprint
+*.xccheckout
+*.ipa
+*.dSYM.zip
+*.dSYM
+*.app
+*.dmg
+
