@@ -50,7 +50,7 @@ final class AppModel: ObservableObject {
             return
         }
 
-        NSWorkspace.shared.open(url)
+        URLPolicy.openExternalURL(url)
     }
 
     func openFileURLs(_ urls: [URL]) {
@@ -80,7 +80,7 @@ final class AppModel: ObservableObject {
 
     func openLinkedFileInNewTab(_ url: URL) {
         guard URLPolicy.isOpenableLocalHTML(url) else {
-            NSWorkspace.shared.open(url)
+            URLPolicy.openExternalURL(url)
             return
         }
 

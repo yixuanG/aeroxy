@@ -1,7 +1,7 @@
 import Foundation
 
 private enum AeroxyCLI {
-    static let version = "0.1.0"
+    static let version = "0.1.2"
     static let appName = "Aeroxy"
     static let appBundleIdentifier = "dev.yixuanguo.aeroxy"
 

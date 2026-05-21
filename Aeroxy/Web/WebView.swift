@@ -94,7 +94,7 @@ struct WebView: NSViewRepresentable {
                 }
 
                 if URLPolicy.isExternalMainFrameURL(url) {
-                    NSWorkspace.shared.open(url)
+                    URLPolicy.openExternalURL(url)
                     decisionHandler(.cancel)
                     return
                 }
@@ -224,7 +224,7 @@ struct WebView: NSViewRepresentable {
             if url.isFileURL {
                 parent.openFileInNewTab(url)
             } else {
-                NSWorkspace.shared.open(url)
+                URLPolicy.openExternalURL(url)
             }
         }
 
