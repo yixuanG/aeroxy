@@ -21,6 +21,23 @@ jobs:
           xcode-select -p
           gh --version
 
+      - name: Import signing certificate
+        if: env.DEVELOPER_ID_CERT_BASE64 != ''
+        env:
+          DEVELOPER_ID_CERT_BASE64: ${{ secrets.DEVELOPER_ID_CERT_BASE64 }}
+          DEVELOPER_ID_CERT_PASSWORD: ${{ secrets.DEVELOPER_ID_CERT_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH=$(mktemp -d)/app-signing.keychain-db
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security default-keychain -s "$KEYCHAIN_PATH"
+          echo "$DEVELOPER_ID_CERT_BASE64" | base64 -d > /tmp/cert.p12
+          security import /tmp/cert.p12 -k "$KEYCHAIN_PATH" -P "$DEVELOPER_ID_CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/xcodebuild
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          rm /tmp/cert.p12
+
       - name: Build DMG
         run: |
           Scripts/build-dmg.sh
@@ -28,17 +45,33 @@ jobs:
           mv .build/Aeroxy.dmg ".build/Aeroxy-${VERSION}.dmg"
           shasum -a 256 ".build/Aeroxy-${VERSION}.dmg" > ".build/Aeroxy-${VERSION}.dmg.sha256"
 
+      - name: Notarize DMG
+        if: env.APPSTORE_CONNECT_API_KEY != ''
+        env:
+          APPSTORE_CONNECT_API_KEY: ${{ secrets.APPSTORE_CONNECT_API_KEY }}
+          APPSTORE_CONNECT_API_KEY_ID: ${{ secrets.APPSTORE_CONNECT_API_KEY_ID }}
+          APPSTORE_CONNECT_API_ISSUER: ${{ secrets.APPSTORE_CONNECT_API_ISSUER }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          DMG=".build/Aeroxy-${VERSION}.dmg"
+          xcrun notarytool submit "$DMG" \
+            --key "$APPSTORE_CONNECT_API_KEY" \
+            --key-id "$APPSTORE_CONNECT_API_KEY_ID" \
+            --issuer "$APPSTORE_CONNECT_API_ISSUER" \
+            --wait
+          xcrun stapler staple "$DMG"
+          echo "Notarization complete."
+
       - name: Release notes
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           cat > .build/release-notes.md <<EOF
           Aeroxy ${VERSION}
 
-          First public developer preview of Aeroxy, a tiny macOS HTML report viewer for AI-generated local reports.
+          A lightweight macOS HTML report viewer for AI-generated local reports.
 
           Notes:
           - Requires macOS 15 or newer.
-          - This preview DMG is unsigned and not notarized yet. macOS Gatekeeper may require right-click Open for first launch.
           - Web links open in the system default browser; local HTML links open as Aeroxy tabs.
           - The embedded CLI helper is available inside the app bundle at Contents/Library/Helpers/aeroxy.
 
@@ -50,8 +83,18 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          gh release create "$GITHUB_REF_NAME" \
-            ".build/Aeroxy-${VERSION}.dmg" \
-            ".build/Aeroxy-${VERSION}.dmg.sha256" \
-            --title "Aeroxy ${VERSION}" \
-            --notes-file .build/release-notes.md
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" \
+              ".build/Aeroxy-${VERSION}.dmg" \
+              ".build/Aeroxy-${VERSION}.dmg.sha256" \
+              --clobber
+            gh release edit "$GITHUB_REF_NAME" \
+              --title "Aeroxy ${VERSION}" \
+              --notes-file .build/release-notes.md
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              ".build/Aeroxy-${VERSION}.dmg" \
+              ".build/Aeroxy-${VERSION}.dmg.sha256" \
+              --title "Aeroxy ${VERSION}" \
+              --notes-file .build/release-notes.md
+          fi
