@@ -27,6 +27,12 @@ struct AeroxyCommands: Commands {
             }
             .keyboardShortcut("p", modifiers: [.command, .shift])
             .disabled(model.selectedTab == nil)
+
+            Divider()
+
+            Button("Use Aeroxy for HTML Files") {
+                model.setAsDefaultHTMLViewer()
+            }
         }
 
         CommandMenu("History") {

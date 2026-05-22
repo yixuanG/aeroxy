@@ -1,18 +1,16 @@
-import CoreServices
 import SwiftUI
 
 @main
 struct AeroxyApp: App {
     @StateObject private var model = AppModel()
 
-    init() {
-        LaunchServicesRegistrar.registerCurrentBundle()
-    }
-
     var body: some Scene {
         WindowGroup {
             ContentView(model: model)
                 .frame(minWidth: 680, minHeight: 440)
+                .onAppear {
+                    model.offerDefaultHTMLViewerRegistrationIfNeeded()
+                }
                 .onOpenURL { url in
                     model.handleIncomingURL(url)
                 }
@@ -23,12 +21,5 @@ struct AeroxyApp: App {
         .commands {
             AeroxyCommands(model: model)
         }
-    }
-}
-
-private enum LaunchServicesRegistrar {
-    static func registerCurrentBundle() {
-        let bundleURL = Bundle.main.bundleURL as CFURL
-        LSRegisterURL(bundleURL, true)
     }
 }

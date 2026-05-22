@@ -1,4 +1,5 @@
 import AppKit
+import CoreServices
 import Foundation
 import UniformTypeIdentifiers
 
@@ -9,6 +10,9 @@ struct PDFExportRequest: Equatable, Identifiable {
 
 @MainActor
 final class AppModel: ObservableObject {
+    private let defaultHTMLViewerPromptKey = "DidOfferDefaultHTMLViewerRegistration"
+    private var didOfferDefaultHTMLViewerRegistration = false
+
     @Published private(set) var tabs: [HTMLTab] = []
     @Published var selectedTabID: HTMLTab.ID?
     @Published private(set) var printRequestID = UUID()
@@ -22,6 +26,61 @@ final class AppModel: ObservableObject {
         }
 
         return tabs.first { $0.id == selectedTabID }
+    }
+
+    func registerBundleWithLaunchServices() {
+        HTMLFileAssociation.registerCurrentBundle()
+    }
+
+    func offerDefaultHTMLViewerRegistrationIfNeeded() {
+        registerBundleWithLaunchServices()
+
+        guard !didOfferDefaultHTMLViewerRegistration,
+              !UserDefaults.standard.bool(forKey: defaultHTMLViewerPromptKey),
+              !HTMLFileAssociation.isAeroxyDefaultHTMLViewer
+        else {
+            return
+        }
+
+        didOfferDefaultHTMLViewerRegistration = true
+
+        let alert = NSAlert()
+        alert.messageText = "Use Aeroxy as the default app for local HTML files?"
+        alert.informativeText = """
+        Aeroxy can become the default viewer for .html, .htm, and .xhtml files so AI tools can hand local reports to it more reliably. Web links will still open in your system browser.
+        """
+        alert.addButton(withTitle: "Use Aeroxy")
+        alert.addButton(withTitle: "Not Now")
+
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        let response = alert.runModal()
+        UserDefaults.standard.set(true, forKey: defaultHTMLViewerPromptKey)
+
+        guard response == .alertFirstButtonReturn else {
+            return
+        }
+
+        setAsDefaultHTMLViewer(showResultAlert: false)
+    }
+
+    func setAsDefaultHTMLViewer(showResultAlert: Bool = true) {
+        registerBundleWithLaunchServices()
+
+        do {
+            try HTMLFileAssociation.setAeroxyAsDefaultHTMLViewer()
+
+            if showResultAlert {
+                showAssociationAlert(
+                    message: "Aeroxy is now the default local HTML viewer.",
+                    informativeText: "This only affects .html, .htm, and .xhtml files. Web links still open in your system browser."
+                )
+            }
+        } catch {
+            showAssociationAlert(
+                message: "Aeroxy could not become the default local HTML viewer.",
+                informativeText: error.localizedDescription
+            )
+        }
     }
 
     func showOpenPanel() {
@@ -210,5 +269,63 @@ final class AppModel: ObservableObject {
 
         let nextIndex = (currentIndex + offset + tabs.count) % tabs.count
         selectedTabID = tabs[nextIndex].id
+    }
+
+    private func showAssociationAlert(message: String, informativeText: String) {
+        let alert = NSAlert()
+        alert.messageText = message
+        alert.informativeText = informativeText
+        alert.addButton(withTitle: "OK")
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        alert.runModal()
+    }
+}
+
+private enum HTMLFileAssociation {
+    private static let aeroxyBundleIdentifier = "dev.yixuanguo.aeroxy"
+    private static let htmlContentTypeIdentifiers = [
+        "public.html",
+        "public.xhtml"
+    ]
+
+    static var isAeroxyDefaultHTMLViewer: Bool {
+        htmlContentTypeIdentifiers.allSatisfy { identifier in
+            let handler = LSCopyDefaultRoleHandlerForContentType(identifier as CFString, .viewer)?
+                .takeRetainedValue() as String?
+            return handler == Bundle.main.bundleIdentifier || handler == aeroxyBundleIdentifier
+        }
+    }
+
+    static func registerCurrentBundle() {
+        LSRegisterURL(Bundle.main.bundleURL as CFURL, true)
+    }
+
+    static func setAeroxyAsDefaultHTMLViewer() throws {
+        let bundleIdentifier = Bundle.main.bundleIdentifier ?? aeroxyBundleIdentifier
+        let failures = htmlContentTypeIdentifiers.compactMap { identifier -> String? in
+            let status = LSSetDefaultRoleHandlerForContentType(
+                identifier as CFString,
+                .viewer,
+                bundleIdentifier as CFString
+            )
+
+            guard status != noErr else {
+                return nil
+            }
+
+            return "\(identifier): OSStatus \(status)"
+        }
+
+        guard failures.isEmpty else {
+            throw HTMLFileAssociationError(failures: failures)
+        }
+    }
+}
+
+private struct HTMLFileAssociationError: LocalizedError {
+    let failures: [String]
+
+    var errorDescription: String? {
+        "Launch Services rejected the file association update: \(failures.joined(separator: ", "))"
     }
 }

@@ -13,6 +13,7 @@ Download the latest DMG from [GitHub Releases](https://github.com/yixuanG/aeroxy
 - Local HTML links open as Aeroxy tabs; `http://` and `https://` main-frame navigations open in the default browser.
 - Recent local HTML files are available from the History menu.
 - Multiple local HTML files can be kept open with tabs.
+- Optional registration as the default local HTML file viewer without changing the default web browser.
 - Reports can be printed or exported to PDF without browser-style URL/date headers.
 - Sandboxed read-only file access with security-scoped bookmarks for history.
 - Native SwiftUI interface with Tahoe Liquid Glass when available, and material fallback on older macOS versions.

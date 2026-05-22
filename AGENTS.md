@@ -12,4 +12,4 @@ Check availability first with:
 aeroxy --json doctor
 ```
 
-If the command is missing, use `make install-cli` from this repository after user approval. Do not set Aeroxy as the system default `.html` handler; Aeroxy is a report viewer, not a browser.
+If the command is missing, use `make install-cli` from this repository after user approval. Do not silently set Aeroxy as the system default `.html` handler; Aeroxy may offer this as an explicit user-approved local-file association, but it must never become the default `http` or `https` browser.
