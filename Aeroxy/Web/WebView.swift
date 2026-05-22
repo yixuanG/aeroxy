@@ -68,7 +68,7 @@ struct WebView: NSViewRepresentable {
                     data,
                     mimeType: URLPolicy.mimeType(forLocalHTML: fileURL),
                     characterEncodingName: "utf-8",
-                    baseURL: fileURL.deletingLastPathComponent()
+                    baseURL: fileURL
                 )
             } catch {
                 webView.loadFileURL(fileURL, allowingReadAccessTo: tab.readAccessURL)
@@ -295,7 +295,7 @@ struct WebView: NSViewRepresentable {
                     data,
                     mimeType: URLPolicy.mimeType(forLocalHTML: fileURL),
                     characterEncodingName: "utf-8",
-                    baseURL: fileURL.deletingLastPathComponent()
+                    baseURL: fileURL
                 )
             } catch {
                 report(originalError)

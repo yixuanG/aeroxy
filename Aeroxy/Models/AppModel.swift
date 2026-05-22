@@ -178,6 +178,13 @@ final class AppModel: ObservableObject {
     func openHistoryItem(_ item: HistoryItem) {
         do {
             let resolvedFile = try history.resolve(item)
+            let standardizedURL = resolvedFile.url.standardizedFileURL
+
+            guard resolvedFile.securityScopeAccessGranted || canReadFile(at: standardizedURL) else {
+                requestReadPermission(for: standardizedURL)
+                return
+            }
+
             openResolvedFile(resolvedFile, shouldRemember: true)
         } catch {
             history.remember(item.fileURL)
