@@ -73,6 +73,7 @@ jobs:
           Notes:
           - Requires macOS 15 or newer.
           - Web links open in the system default browser; local HTML links open as Aeroxy tabs.
+          - Reports can be printed or exported to PDF without browser-style URL/date headers.
           - The embedded CLI helper is available inside the app bundle at Contents/Library/Helpers/aeroxy.
 
           SHA-256 checksum is attached as a separate .sha256 file.

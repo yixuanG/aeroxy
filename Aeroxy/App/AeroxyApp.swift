@@ -1,8 +1,13 @@
+import CoreServices
 import SwiftUI
 
 @main
 struct AeroxyApp: App {
     @StateObject private var model = AppModel()
+
+    init() {
+        LaunchServicesRegistrar.registerCurrentBundle()
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -18,5 +23,12 @@ struct AeroxyApp: App {
         .commands {
             AeroxyCommands(model: model)
         }
+    }
+}
+
+private enum LaunchServicesRegistrar {
+    static func registerCurrentBundle() {
+        let bundleURL = Bundle.main.bundleURL as CFURL
+        LSRegisterURL(bundleURL, true)
     }
 }

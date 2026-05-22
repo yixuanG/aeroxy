@@ -27,6 +27,15 @@ enum URLPolicy {
         return ["html", "htm", "xhtml"].contains(fileExtension)
     }
 
+    static func mimeType(forLocalHTML url: URL) -> String {
+        switch url.pathExtension.lowercased() {
+        case "xhtml":
+            return "application/xhtml+xml"
+        default:
+            return "text/html"
+        }
+    }
+
     static func openExternalURL(_ url: URL) {
         guard !wouldReopenAeroxy(url) else {
             return

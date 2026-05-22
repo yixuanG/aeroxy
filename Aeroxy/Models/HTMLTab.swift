@@ -35,7 +35,10 @@ final class HTMLTab: ObservableObject, Identifiable {
         let standardizedURL = fileURL.standardizedFileURL
         self.id = id
         self.fileURL = standardizedURL
-        self.readAccessURL = standardizedURL.deletingLastPathComponent()
+        self.readAccessURL = Self.bestReadAccessURL(
+            for: standardizedURL,
+            securityScopeAccessGranted: securityScopeAccessGranted
+        )
         self.securityScopedFileAccess = SecurityScopedFileAccess(
             url: standardizedURL,
             isGranted: securityScopeAccessGranted
@@ -66,7 +69,10 @@ final class HTMLTab: ObservableObject, Identifiable {
             isGranted: securityScopeAccessGranted
         )
         self.fileURL = standardizedURL
-        readAccessURL = standardizedURL.deletingLastPathComponent()
+        readAccessURL = Self.bestReadAccessURL(
+            for: standardizedURL,
+            securityScopeAccessGranted: securityScopeAccessGranted
+        )
         title = standardizedURL.deletingPathExtension().lastPathComponent
         loadError = nil
     }
@@ -79,6 +85,18 @@ final class HTMLTab: ObservableObject, Identifiable {
         fileURL.deletingLastPathComponent().path
     }
 
+    private static func bestReadAccessURL(
+        for fileURL: URL,
+        securityScopeAccessGranted: Bool
+    ) -> URL {
+        let directoryURL = fileURL.deletingLastPathComponent()
+
+        guard securityScopeAccessGranted || FileManager.default.isReadableFile(atPath: directoryURL.path) else {
+            return fileURL
+        }
+
+        return directoryURL
+    }
 }
 
 extension HTMLTab: Equatable {

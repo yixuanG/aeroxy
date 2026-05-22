@@ -20,6 +20,8 @@ struct ContentView: View {
                         WebView(
                             tab: tab,
                             printRequestID: model.printRequestID,
+                            pdfExportRequest: model.pdfExportRequest,
+                            didHandlePDFExportRequest: model.clearPDFExportRequest,
                             openFileInNewTab: model.openLinkedFileInNewTab
                         )
                         .id(tab.id)

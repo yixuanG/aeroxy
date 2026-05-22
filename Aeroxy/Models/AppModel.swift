@@ -2,11 +2,17 @@ import AppKit
 import Foundation
 import UniformTypeIdentifiers
 
+struct PDFExportRequest: Equatable, Identifiable {
+    let id = UUID()
+    let destinationURL: URL
+}
+
 @MainActor
 final class AppModel: ObservableObject {
     @Published private(set) var tabs: [HTMLTab] = []
     @Published var selectedTabID: HTMLTab.ID?
     @Published private(set) var printRequestID = UUID()
+    @Published private(set) var pdfExportRequest: PDFExportRequest?
 
     let history = HistoryStore()
 
@@ -93,6 +99,40 @@ final class AppModel: ObservableObject {
         }
 
         printRequestID = UUID()
+    }
+
+    func exportSelectedTabAsPDF() {
+        guard let selectedTab else {
+            return
+        }
+
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.pdf]
+        panel.canCreateDirectories = true
+        panel.isExtensionHidden = false
+        panel.message = "Export the current HTML report as PDF"
+        panel.nameFieldStringValue = selectedTab.fileURL
+            .deletingPathExtension()
+            .lastPathComponent + ".pdf"
+        panel.prompt = "Export"
+
+        panel.begin { [weak self] response in
+            guard response == .OK, let url = panel.url else {
+                return
+            }
+
+            Task { @MainActor in
+                self?.pdfExportRequest = PDFExportRequest(destinationURL: url)
+            }
+        }
+    }
+
+    func clearPDFExportRequest(id: PDFExportRequest.ID) {
+        guard pdfExportRequest?.id == id else {
+            return
+        }
+
+        pdfExportRequest = nil
     }
 
     func closeTab(_ tab: HTMLTab) {

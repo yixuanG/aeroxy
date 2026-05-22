@@ -21,6 +21,12 @@ struct AeroxyCommands: Commands {
             }
             .keyboardShortcut("p")
             .disabled(model.selectedTab == nil)
+
+            Button("Export as PDF...") {
+                model.exportSelectedTabAsPDF()
+            }
+            .keyboardShortcut("p", modifiers: [.command, .shift])
+            .disabled(model.selectedTab == nil)
         }
 
         CommandMenu("History") {

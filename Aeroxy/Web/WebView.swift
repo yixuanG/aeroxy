@@ -5,6 +5,8 @@ import WebKit
 struct WebView: NSViewRepresentable {
     @ObservedObject var tab: HTMLTab
     let printRequestID: UUID
+    let pdfExportRequest: PDFExportRequest?
+    let didHandlePDFExportRequest: (PDFExportRequest.ID) -> Void
     let openFileInNewTab: (URL) -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -31,6 +33,7 @@ struct WebView: NSViewRepresentable {
         context.coordinator.parent = self
         context.coordinator.load(tab: tab, in: webView)
         context.coordinator.printIfRequested(webView)
+        context.coordinator.exportPDFIfRequested(webView)
     }
 
     @MainActor
@@ -38,7 +41,9 @@ struct WebView: NSViewRepresentable {
         var parent: WebView
         private var loadedTabID: HTMLTab.ID?
         private var loadedFileURL: URL?
+        private var usedDataLoadFallback = false
         private var handledPrintRequestID: UUID
+        private var handledPDFExportRequestID: PDFExportRequest.ID?
 
         init(parent: WebView) {
             self.parent = parent
@@ -54,6 +59,7 @@ struct WebView: NSViewRepresentable {
 
             loadedTabID = tab.id
             loadedFileURL = fileURL
+            usedDataLoadFallback = false
             tab.loadError = nil
             webView.loadFileURL(fileURL, allowingReadAccessTo: tab.readAccessURL)
         }
@@ -153,7 +159,7 @@ struct WebView: NSViewRepresentable {
             didFailProvisionalNavigation navigation: WKNavigation!,
             withError error: Error
         ) {
-            report(error)
+            loadFileDataFallback(in: webView, originalError: error)
         }
 
         func webView(
@@ -217,14 +223,71 @@ struct WebView: NSViewRepresentable {
             }
 
             handledPrintRequestID = parent.printRequestID
-            webView.printOperation(with: NSPrintInfo.shared).run()
+            webView.printOperation(with: Self.reportPrintInfo()).run()
+        }
+
+        func exportPDFIfRequested(_ webView: WKWebView) {
+            guard
+                let request = parent.pdfExportRequest,
+                handledPDFExportRequestID != request.id
+            else {
+                return
+            }
+
+            handledPDFExportRequestID = request.id
+
+            let printInfo = Self.reportPrintInfo()
+            printInfo.dictionary()[NSPrintInfo.AttributeKey.jobDisposition] = NSPrintInfo.JobDisposition.save
+            printInfo.dictionary()[NSPrintInfo.AttributeKey.jobSavingURL] = request.destinationURL
+
+            let operation = webView.printOperation(with: printInfo)
+            operation.showsPrintPanel = false
+            operation.showsProgressPanel = true
+            operation.run()
+            parent.didHandlePDFExportRequest(request.id)
         }
 
         private func openNewWindowURL(_ url: URL) {
-            if url.isFileURL {
+            if URLPolicy.isOpenableLocalHTML(url) {
                 parent.openFileInNewTab(url)
+            } else if url.isFileURL {
+                NSWorkspace.shared.open(url)
             } else {
                 URLPolicy.openExternalURL(url)
+            }
+        }
+
+        private static func reportPrintInfo() -> NSPrintInfo {
+            let printInfo = (NSPrintInfo.shared.copy() as? NSPrintInfo) ?? NSPrintInfo()
+            printInfo.horizontalPagination = .fit
+            printInfo.verticalPagination = .automatic
+            printInfo.isHorizontallyCentered = true
+            printInfo.isVerticallyCentered = false
+            printInfo.topMargin = 36
+            printInfo.bottomMargin = 36
+            printInfo.leftMargin = 36
+            printInfo.rightMargin = 36
+            return printInfo
+        }
+
+        private func loadFileDataFallback(in webView: WKWebView, originalError: Error) {
+            guard !usedDataLoadFallback, let fileURL = loadedFileURL else {
+                report(originalError)
+                return
+            }
+
+            do {
+                let data = try Data(contentsOf: fileURL)
+                usedDataLoadFallback = true
+                parent.tab.loadError = nil
+                webView.load(
+                    data,
+                    mimeType: URLPolicy.mimeType(forLocalHTML: fileURL),
+                    characterEncodingName: "utf-8",
+                    baseURL: fileURL.deletingLastPathComponent()
+                )
+            } catch {
+                report(originalError)
             }
         }
 
