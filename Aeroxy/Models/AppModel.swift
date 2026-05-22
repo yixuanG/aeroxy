@@ -160,6 +160,12 @@ final class AppModel: ObservableObject {
     func openFileURL(_ url: URL) {
         let standardizedURL = url.standardizedFileURL
         let accessGranted = standardizedURL.startAccessingSecurityScopedResource()
+
+        guard accessGranted || canReadFile(at: standardizedURL) else {
+            requestReadPermission(for: standardizedURL)
+            return
+        }
+
         openResolvedFile(
             ResolvedHistoryFile(
                 url: standardizedURL,
@@ -313,6 +319,42 @@ final class AppModel: ObservableObject {
         alert.addButton(withTitle: "OK")
         NSApplication.shared.activate(ignoringOtherApps: true)
         alert.runModal()
+    }
+
+    private func canReadFile(at url: URL) -> Bool {
+        do {
+            let handle = try FileHandle(forReadingFrom: url)
+            try? handle.close()
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    private func requestReadPermission(for url: URL) {
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.allowedContentTypes = [
+            .html,
+            UTType(filenameExtension: "htm"),
+            UTType(filenameExtension: "xhtml")
+        ].compactMap { $0 }
+        panel.directoryURL = url.deletingLastPathComponent()
+        panel.message = "Confirm access to open this local HTML file"
+        panel.prompt = "Open"
+
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        panel.begin { [weak self] response in
+            guard response == .OK, let selectedURL = panel.url else {
+                return
+            }
+
+            Task { @MainActor in
+                self?.openFileURL(selectedURL)
+            }
+        }
     }
 
     private func clipboardHTMLFileURL(from pasteboard: NSPasteboard) -> URL? {

@@ -15,6 +15,7 @@ Download the latest DMG from [GitHub Releases](https://github.com/yixuanG/aeroxy
 - Multiple local HTML files can be kept open with tabs.
 - Optional registration as the default local HTML file viewer without changing the default web browser.
 - Clipboard and path-bar fallback opening for AI tools that only expose copied local file paths.
+- Main HTML documents are handed to WebKit as data to avoid sandbox file-read blank screens.
 - Reports can be printed or exported to PDF without browser-style URL/date headers.
 - Sandboxed read-only file access with security-scoped bookmarks for history.
 - Native SwiftUI interface with Tahoe Liquid Glass when available, and material fallback on older macOS versions.

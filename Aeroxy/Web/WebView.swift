@@ -61,7 +61,18 @@ struct WebView: NSViewRepresentable {
             loadedFileURL = fileURL
             usedDataLoadFallback = false
             tab.loadError = nil
-            webView.loadFileURL(fileURL, allowingReadAccessTo: tab.readAccessURL)
+
+            do {
+                let data = try Data(contentsOf: fileURL)
+                webView.load(
+                    data,
+                    mimeType: URLPolicy.mimeType(forLocalHTML: fileURL),
+                    characterEncodingName: "utf-8",
+                    baseURL: fileURL.deletingLastPathComponent()
+                )
+            } catch {
+                webView.loadFileURL(fileURL, allowingReadAccessTo: tab.readAccessURL)
+            }
         }
 
         func webView(
@@ -167,7 +178,7 @@ struct WebView: NSViewRepresentable {
             didFail navigation: WKNavigation!,
             withError error: Error
         ) {
-            report(error)
+            loadFileDataFallback(in: webView, originalError: error)
         }
 
         func webView(

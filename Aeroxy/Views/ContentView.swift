@@ -33,6 +33,12 @@ struct ContentView: View {
                             openFileInNewTab: model.openLinkedFileInNewTab
                         )
                         .id(tab.id)
+                        .overlay {
+                            if let loadError = tab.loadError {
+                                LoadErrorView(message: loadError)
+                                    .padding(24)
+                            }
+                        }
                     } else {
                         EmptyStateView(openAction: model.showOpenPanel)
                     }
@@ -122,5 +128,29 @@ private struct PathOpenBar: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 7)
         .background(.regularMaterial)
+    }
+}
+
+private struct LoadErrorView: View {
+    let message: String
+
+    var body: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 30, weight: .medium))
+                .foregroundStyle(.secondary)
+
+            Text("Could not render this HTML file")
+                .font(.system(size: 14, weight: .semibold))
+
+            Text(message)
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .lineLimit(4)
+        }
+        .padding(18)
+        .frame(maxWidth: 420)
+        .aeroxyGlass(cornerRadius: 12)
     }
 }
