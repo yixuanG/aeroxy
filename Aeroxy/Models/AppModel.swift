@@ -12,6 +12,7 @@ struct PDFExportRequest: Equatable, Identifiable {
 final class AppModel: ObservableObject {
     private let defaultHTMLViewerPromptKey = "DidOfferDefaultHTMLViewerRegistration"
     private var didOfferDefaultHTMLViewerRegistration = false
+    private var lastPromptedClipboardChangeCount = -1
 
     @Published private(set) var tabs: [HTMLTab] = []
     @Published var selectedTabID: HTMLTab.ID?
@@ -81,6 +82,40 @@ final class AppModel: ObservableObject {
                 informativeText: error.localizedDescription
             )
         }
+    }
+
+    func offerClipboardHTMLIfAvailable() {
+        let pasteboard = NSPasteboard.general
+        let changeCount = pasteboard.changeCount
+
+        guard changeCount != lastPromptedClipboardChangeCount,
+              let url = clipboardHTMLFileURL(from: pasteboard)
+        else {
+            return
+        }
+
+        lastPromptedClipboardChangeCount = changeCount
+
+        let alert = NSAlert()
+        alert.messageText = "Open HTML file from clipboard?"
+        alert.informativeText = url.path
+        alert.addButton(withTitle: "Open")
+        alert.addButton(withTitle: "Cancel")
+
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        guard alert.runModal() == .alertFirstButtonReturn else {
+            return
+        }
+
+        openFileURL(url)
+    }
+
+    func openLocalHTMLPathText(_ text: String) throws {
+        guard let url = URLPolicy.localHTMLFileURL(fromPathText: text) else {
+            throw LocalHTMLPathError.invalidPath
+        }
+
+        openFileURL(url)
     }
 
     func showOpenPanel() {
@@ -278,6 +313,29 @@ final class AppModel: ObservableObject {
         alert.addButton(withTitle: "OK")
         NSApplication.shared.activate(ignoringOtherApps: true)
         alert.runModal()
+    }
+
+    private func clipboardHTMLFileURL(from pasteboard: NSPasteboard) -> URL? {
+        if let fileURLString = pasteboard.string(forType: .fileURL),
+           let fileURL = URL(string: fileURLString),
+           URLPolicy.isOpenableLocalHTML(fileURL),
+           FileManager.default.fileExists(atPath: fileURL.path) {
+            return fileURL.standardizedFileURL
+        }
+
+        guard let clipboardString = pasteboard.string(forType: .string) else {
+            return nil
+        }
+
+        return URLPolicy.localHTMLFileURL(fromPathText: clipboardString)
+    }
+}
+
+private enum LocalHTMLPathError: LocalizedError {
+    case invalidPath
+
+    var errorDescription: String? {
+        "Paste a local .html, .htm, or .xhtml file path."
     }
 }
 

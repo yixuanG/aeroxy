@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 @main
@@ -10,6 +11,10 @@ struct AeroxyApp: App {
                 .frame(minWidth: 680, minHeight: 440)
                 .onAppear {
                     model.offerDefaultHTMLViewerRegistrationIfNeeded()
+                    model.offerClipboardHTMLIfAvailable()
+                }
+                .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+                    model.offerClipboardHTMLIfAvailable()
                 }
                 .onOpenURL { url in
                     model.handleIncomingURL(url)

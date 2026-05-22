@@ -3,6 +3,8 @@ import UniformTypeIdentifiers
 
 struct ContentView: View {
     @ObservedObject var model: AppModel
+    @State private var pathText = ""
+    @State private var pathError: String?
 
     var body: some View {
         ZStack {
@@ -11,6 +13,12 @@ struct ContentView: View {
 
             VStack(spacing: 0) {
                 TabBarView(model: model)
+
+                PathOpenBar(
+                    pathText: $pathText,
+                    pathError: pathError,
+                    openAction: openTypedPath
+                )
 
                 Divider()
                     .opacity(0.42)
@@ -61,5 +69,58 @@ struct ContentView: View {
         }
 
         return false
+    }
+
+    private func openTypedPath() {
+        do {
+            try model.openLocalHTMLPathText(pathText)
+            pathText = ""
+            pathError = nil
+        } catch {
+            pathError = error.localizedDescription
+        }
+    }
+}
+
+private struct PathOpenBar: View {
+    @Binding var pathText: String
+    let pathError: String?
+    let openAction: () -> Void
+
+    private var canOpen: Bool {
+        !pathText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "doc.text.magnifyingglass")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(.secondary)
+
+            TextField("Paste local HTML file path or file:// URL", text: $pathText)
+                .textFieldStyle(.plain)
+                .font(.system(size: 13))
+                .onSubmit(openAction)
+
+            if let pathError {
+                Text(pathError)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.red)
+                    .lineLimit(1)
+            }
+
+            Button {
+                openAction()
+            } label: {
+                Image(systemName: "arrow.forward")
+                    .font(.system(size: 13, weight: .semibold))
+                    .frame(width: 24, height: 20)
+            }
+            .buttonStyle(.aeroxyGlass)
+            .disabled(!canOpen)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .background(.regularMaterial)
     }
 }

@@ -74,6 +74,7 @@ jobs:
           - Requires macOS 15 or newer.
           - Web links open in the system default browser; local HTML links open as Aeroxy tabs.
           - Aeroxy can register itself as the default local HTML file viewer without changing the default browser.
+          - Clipboard and path-bar fallback opening is available for AI tools that do not expose Aeroxy in Open With menus.
           - Reports can be printed or exported to PDF without browser-style URL/date headers.
           - The embedded CLI helper is available inside the app bundle at Contents/Library/Helpers/aeroxy.
 
